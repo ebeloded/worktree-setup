@@ -15,7 +15,7 @@ This package automates that by hooking into Git's native `post-checkout` hook.
 ## Installation
 
 ```bash
-npm install -D git-worktree-hooks
+bun add -D git-worktree-hooks
 ```
 
 ## Setup
@@ -30,8 +30,8 @@ npm install -D git-worktree-hooks
       ".vscode/settings.json"
     ],
     "run": [
-      "npm install",
-      "npm run prepare"
+      "bun install",
+      "bun run prepare"
     ]
   }
 }
@@ -44,7 +44,7 @@ Using [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks):
 ```json
 {
   "simple-git-hooks": {
-    "post-checkout": "npx git-worktree-hooks"
+    "post-checkout": "bunx git-worktree-hooks"
   }
 }
 ```
@@ -52,14 +52,14 @@ Using [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks):
 Using [husky](https://github.com/typicode/husky):
 
 ```bash
-echo "npx git-worktree-hooks" > .husky/post-checkout
+echo "bunx git-worktree-hooks" > .husky/post-checkout
 ```
 
 Or manually in `.git/hooks/post-checkout`:
 
 ```bash
 #!/bin/sh
-npx git-worktree-hooks
+bunx git-worktree-hooks
 ```
 
 ### 3. Add marker file to .gitignore
@@ -107,7 +107,7 @@ Add a `worktreeSetup` key to your `package.json`:
 ## CLI Options
 
 ```bash
-npx git-worktree-hooks [options]
+bunx git-worktree-hooks [options]
 
 Options:
   -v, --verbose  Show detailed output
