@@ -1,21 +1,37 @@
-name: Publish
+name: Publish to npm
 
 on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
-  publish:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: oven-sh/setup-bun@v2
 
-      - run: bun install
+      - run: bun install --frozen-lockfile
 
       - run: bun run build
 
-      - uses: JS-DevTools/npm-publish@v3
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v6
         with:
-          token: ${{ secrets.NPM_TOKEN }}
+          node-version: 24
+
+      - run: bun install --frozen-lockfile
+
+      - run: npm publish --provenance --access public
