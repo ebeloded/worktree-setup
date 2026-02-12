@@ -1,10 +1,11 @@
 {
   "name": "worktree-setup",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Automatic setup for Git worktrees via post-checkout hook",
   "type": "module",
   "bin": {
-    "worktree-setup": "./dist/cli.js"
+    "worktree-setup": "./dist/cli.js",
+    "workspace-setup": "./dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

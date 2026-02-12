@@ -37,7 +37,15 @@ bun add -D worktree-setup
 }
 ```
 
-### 2. Configure the post-checkout hook
+### 2. Initialize hooks automatically
+
+```bash
+bunx worktree-setup init
+```
+
+This creates `.git/hooks/post-checkout` and adds `.worktree-setup.log` to `.gitignore`.
+
+### 3. Configure the post-checkout hook manually (optional)
 
 Using [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks):
 
@@ -62,7 +70,7 @@ Or manually in `.git/hooks/post-checkout`:
 bunx worktree-setup
 ```
 
-### 3. Add setup log file to .gitignore
+### 4. Add setup log file to .gitignore
 
 ```gitignore
 .worktree-setup.log
@@ -108,9 +116,11 @@ Add a `worktreeSetup` key to your `package.json`:
 
 ```bash
 bunx worktree-setup [options]
+bunx worktree-setup init [options]
 
 Options:
   -v, --verbose  Show detailed output
+  --force        Overwrite existing post-checkout hook (init only)
 ```
 
 ## Programmatic Usage
