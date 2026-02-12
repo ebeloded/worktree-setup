@@ -1,10 +1,11 @@
-import { execSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { detectWorktree } from './git.js'
 import type { WorktreeSetupConfig } from './types.js'
 
-const MARKER_FILE = '.worktree-initialized'
+const LOG_FILE = '.worktree-setup.log'
+const SUCCESS_TOKEN = 'WORKTREE_SETUP_STATUS=success'
 
 function readConfig(mainRoot: string): WorktreeSetupConfig | null {
   const pkgPath = path.join(mainRoot, 'package.json')
@@ -32,6 +33,24 @@ function copyIfMissing(src: string, dest: string): boolean {
   }
 
   return true
+}
+
+function nowIso(): string {
+  return new Date().toISOString()
+}
+
+function appendLog(logPath: string, message: string): void {
+  fs.appendFileSync(logPath, `[${nowIso()}] ${message}\n`)
+}
+
+function hasSuccessfulSetup(logPath: string): boolean {
+  if (!fs.existsSync(logPath)) return false
+  const content = fs.readFileSync(logPath, 'utf8')
+  return content.includes(SUCCESS_TOKEN)
+}
+
+function shellQuote(input: string): string {
+  return `'${input.replaceAll("'", "'\\''")}'`
 }
 
 export interface SetupOptions {
@@ -63,7 +82,7 @@ export interface SetupResult {
   copiedFiles?: string[]
 
   /**
-   * Commands that were run
+   * Commands that were run or queued
    */
   ranCommands?: string[]
 }
@@ -74,7 +93,7 @@ export interface SetupResult {
 export async function runSetup(options: SetupOptions = {}): Promise<SetupResult> {
   const { cwd = process.cwd(), verbose = false } = options
 
-  const log = verbose ? console.log.bind(console) : () => {}
+  const verboseLog = verbose ? console.log.bind(console) : () => {}
 
   // Detect worktree
   const info = detectWorktree(cwd)
@@ -98,14 +117,15 @@ export async function runSetup(options: SetupOptions = {}): Promise<SetupResult>
     return { performed: false, skippedReason: 'No worktreeSetup config in package.json' }
   }
 
-  // Check marker file
-  const markerPath = path.join(info.worktreeRoot, MARKER_FILE)
-  if (fs.existsSync(markerPath)) {
+  const logPath = path.join(info.worktreeRoot, LOG_FILE)
+  if (hasSuccessfulSetup(logPath)) {
     return { performed: false, skippedReason: 'Already initialized' }
   }
 
+  appendLog(logPath, `setup start for ${info.worktreeRoot}`)
+
   const copiedFiles: string[] = []
-  const ranCommands: string[] = []
+  let copyFailed = false
 
   // Copy files
   for (const rel of config.copy ?? []) {
@@ -115,40 +135,58 @@ export async function runSetup(options: SetupOptions = {}): Promise<SetupResult>
     try {
       if (copyIfMissing(src, dest)) {
         copiedFiles.push(rel)
-        log(`Copied: ${rel}`)
+        appendLog(logPath, `copy: copied ${rel}`)
+        verboseLog(`Copied: ${rel}`)
+      } else if (fs.existsSync(dest)) {
+        appendLog(logPath, `copy: skipped (exists) ${rel}`)
+      } else {
+        appendLog(logPath, `copy: skipped (missing source) ${rel}`)
       }
     } catch (err) {
+      copyFailed = true
+      appendLog(logPath, `copy: failed ${rel} (${String(err)})`)
       console.error(`Failed to copy ${rel}:`, err)
-      return { performed: false, skippedReason: `Failed to copy ${rel}` }
     }
   }
 
-  // Run commands
-  for (const cmd of config.run ?? []) {
-    log(`Running: ${cmd}`)
+  if (copyFailed) {
+    appendLog(logPath, 'WORKTREE_SETUP_STATUS=failed stage=copy')
+    return { performed: false, skippedReason: 'Failed to copy one or more files' }
+  }
+
+  const commands = config.run ?? []
+  if (commands.length > 0) {
+    appendLog(logPath, `run: launching ${commands.length} command(s) in background`)
+    const runChain = commands.join(' && ')
+    const script = `{ echo "[$(date '+%Y-%m-%dT%H:%M:%S%z')] command run start (${commands.length} command(s))"; ${runChain}; rc=$?; if [ "$rc" -eq 0 ]; then echo "[$(date '+%Y-%m-%dT%H:%M:%S%z')] ${SUCCESS_TOKEN}"; else echo "[$(date '+%Y-%m-%dT%H:%M:%S%z')] WORKTREE_SETUP_STATUS=failed stage=run exit_code=$rc"; fi; exit "$rc"; }`
+    const wrappedScript = `{ ${script}; } >> ${shellQuote(logPath)} 2>&1`
+
     try {
-      execSync(cmd, {
+      const proc = spawn('bash', ['-lc', wrappedScript], {
         cwd: info.worktreeRoot,
-        stdio: verbose ? 'inherit' : 'pipe',
-        shell: '/bin/bash',
+        detached: true,
+        stdio: 'ignore',
       })
-      ranCommands.push(cmd)
+      proc.unref()
+      appendLog(logPath, `run: background process started pid=${proc.pid}`)
+      verboseLog(
+        `Running ${commands.length} command(s) in background (log: ${LOG_FILE})`,
+      )
     } catch (err) {
-      console.error(`Command failed: ${cmd}`, err)
-      return { performed: false, skippedReason: `Command failed: ${cmd}` }
+      appendLog(
+        logPath,
+        `WORKTREE_SETUP_STATUS=failed stage=spawn error=${String(err)}`,
+      )
+      console.error('Failed to spawn run commands:', err)
+      return { performed: false, skippedReason: 'Failed to spawn run commands' }
     }
-  }
-
-  // Write marker file
-  try {
-    fs.writeFileSync(markerPath, `${new Date().toISOString()}\n`)
-  } catch (err) {
-    console.warn('Failed to write marker file:', err)
+  } else {
+    appendLog(logPath, SUCCESS_TOKEN)
   }
 
   return {
     performed: true,
     copiedFiles,
-    ranCommands,
+    ranCommands: commands,
   }
 }
