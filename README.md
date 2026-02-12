@@ -1,4 +1,4 @@
-# git-worktree-hooks
+# worktree-setup
 
 Automatic setup for Git worktrees via post-checkout hook. Works with any tool that creates worktrees - Cursor, Codex, wt CLI, or plain `git worktree add`.
 
@@ -15,7 +15,7 @@ This package automates that by hooking into Git's native `post-checkout` hook.
 ## Installation
 
 ```bash
-bun add -D git-worktree-hooks
+bun add -D worktree-setup
 ```
 
 ## Setup
@@ -44,7 +44,7 @@ Using [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks):
 ```json
 {
   "simple-git-hooks": {
-    "post-checkout": "bunx git-worktree-hooks"
+    "post-checkout": "bunx worktree-setup"
   }
 }
 ```
@@ -52,20 +52,20 @@ Using [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks):
 Using [husky](https://github.com/typicode/husky):
 
 ```bash
-echo "bunx git-worktree-hooks" > .husky/post-checkout
+echo "bunx worktree-setup" > .husky/post-checkout
 ```
 
 Or manually in `.git/hooks/post-checkout`:
 
 ```bash
 #!/bin/sh
-bunx git-worktree-hooks
+bunx worktree-setup
 ```
 
-### 3. Add marker file to .gitignore
+### 3. Add setup log file to .gitignore
 
 ```gitignore
-.worktree-initialized
+.worktree-setup.log
 ```
 
 ## Configuration
@@ -102,12 +102,12 @@ Add a `worktreeSetup` key to your `package.json`:
 3. Reads `worktreeSetup` config from the main worktree's `package.json`
 4. Copies specified files that don't already exist
 5. Runs specified commands
-6. Creates a `.worktree-initialized` marker so it only runs once
+6. Appends `WORKTREE_SETUP_STATUS=success` to `.worktree-setup.log` so it only runs once
 
 ## CLI Options
 
 ```bash
-bunx git-worktree-hooks [options]
+bunx worktree-setup [options]
 
 Options:
   -v, --verbose  Show detailed output
@@ -116,7 +116,7 @@ Options:
 ## Programmatic Usage
 
 ```typescript
-import { runSetup, detectWorktree } from 'git-worktree-hooks'
+import { runSetup, detectWorktree } from 'worktree-setup'
 
 // Run setup
 const result = await runSetup({ verbose: true })

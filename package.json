@@ -1,10 +1,10 @@
 {
-  "name": "git-worktree-hooks",
+  "name": "worktree-setup",
   "version": "0.1.0",
   "description": "Automatic setup for Git worktrees via post-checkout hook",
   "type": "module",
   "bin": {
-    "git-worktree-hooks": "./dist/cli.js"
+    "worktree-setup": "./dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -33,7 +33,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ebeloded/git-worktree-hooks.git"
+    "url": "git+https://github.com/ebeloded/worktree-setup.git"
   },
   "engines": {
     "node": ">=18"
