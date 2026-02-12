@@ -9,19 +9,7 @@ permissions:
   id-token: write
 
 jobs:
-  verify:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-
-      - run: bun install --frozen-lockfile
-
-      - run: bun run build
-
   publish:
-    needs: verify
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,5 +21,7 @@ jobs:
           node-version: 24
 
       - run: bun install --frozen-lockfile
+
+      - run: bun run build
 
       - run: npm publish --provenance --access public
